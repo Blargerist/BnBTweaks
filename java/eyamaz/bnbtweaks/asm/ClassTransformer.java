@@ -56,17 +56,22 @@ public class ClassTransformer implements IClassTransformer
 			
 			ClassNode classNode = readClassFromBytes(bytes);
 			
-			MethodNode methodNode = null;
+		    MethodNode methodNode = findMethodNodeOfClass(classNode, "onItemRightClick", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;)Lnet/minecraft/item/ItemStack;");
+
+			MethodNode obfMethodNode = findMethodNodeOfClass(classNode, "a", "(Lye;Labw;Luf;)Lye;");
 			
-			if (!isObfuscated) {
-			methodNode = findMethodNodeOfClass(classNode, "onItemRightClick", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;)Lnet/minecraft/item/ItemStack;");
-			}
-			else
-				methodNode = findMethodNodeOfClass(classNode, "wr/a", "(Lye;Labw;Luf;)Lye;");
-			
-			if (methodNode != null)
+			if (methodNode != null || obfMethodNode != null)
 			{
-				fixItemBucket(methodNode);
+				if (isObfuscated)
+				{
+					ModBnBTweaks.Log.info("Patching Method: " + obfMethodNode);
+					fixObfItemBucket(obfMethodNode);
+				}
+				else if (!isObfuscated)
+				{
+					ModBnBTweaks.Log.info("Patching Method: " + methodNode);
+					fixItemBucket(methodNode);
+				}
 			}
 			
 			return writeClassToBytes(classNode);
@@ -177,14 +182,14 @@ public class ClassTransformer implements IClassTransformer
 	
 	public void fixItemBucket(MethodNode method)
 	{
-		AbstractInsnNode targetNode = findChronoInstructionOfType(method, ALOAD, 54);
+		AbstractInsnNode targetNode = findChronoInstructionOfType(method, ALOAD, 53);
 		
 		InsnList toInject = new InsnList();
 		
-        	//if (par2World.getBlockId(i, j, k) == 2957) 
-        	//{
-        	//	return new ItemStack(Item.bucketEmpty);
-        	//}
+        //if (par2World.getBlockId(i, j, k) == 2957) 
+        //{
+        //	return new ItemStack(Item.bucketEmpty);
+        //}
 		//Effectively if clicked on a Bloody Cobblestone from Hostile Worlds
 		//Removes liquid from bucket without placing
 		
@@ -197,7 +202,7 @@ public class ClassTransformer implements IClassTransformer
 		LabelNode labelIfEqualTo = new LabelNode(); // labelnode if true
 		toInject.add(new JumpInsnNode(IF_ICMPNE, labelIfEqualTo)); // if getBlockId == MyId
 		toInject.add(new TypeInsnNode(NEW, "net/minecraft/item/ItemStack")); // Load Return Values
-		toInject.add(new InsnNode(DUP)); //Load Return Values
+		//toInject.add(new InsnNode(DUP)); //Load Return Values
 		toInject.add(new FieldInsnNode(GETSTATIC, "net/minecraft/item/Item", "bucketEmpty", "Lnet/minecraft/item/Item;")); // Load Return Values
 		toInject.add(new MethodInsnNode(INVOKESPECIAL, "net/minecraft/item/ItemStack", "<init>", "(Lnet/minecraft/item/Item;)V")); // Load Return Values
 		toInject.add(new InsnNode(ARETURN)); //Return Values
@@ -206,6 +211,38 @@ public class ClassTransformer implements IClassTransformer
 		method.instructions.insertBefore(targetNode, toInject);
 		
 		ModBnBTweaks.Log.info(" Patched " + method.name);
+	}
+	
+	public void fixObfItemBucket(MethodNode method)
+	{
+		AbstractInsnNode targetNode = findChronoInstructionOfType(method, ALOAD, 53);
 		
+		InsnList toInject = new InsnList();
+		
+        //if (par2World.getBlockId(i, j, k) == 2957) 
+        //{
+        //	return new ItemStack(Item.bucketEmpty);
+        //}
+		//Effectively if clicked on a Bloody Cobblestone from Hostile Worlds
+		//Removes liquid from bucket without placing
+		
+		toInject.add(new VarInsnNode(ALOAD, 2)); //par2World
+		toInject.add(new VarInsnNode(ILOAD, 7)); //i
+		toInject.add(new VarInsnNode(ILOAD, 8)); //j
+		toInject.add(new VarInsnNode(ILOAD, 9)); //k
+		toInject.add(new MethodInsnNode(INVOKEVIRTUAL, "abw", "a", "(III)I")); //getBlockId
+		toInject.add(new IntInsnNode(SIPUSH, 2957)); // MyId to be compared to getBlockId
+		LabelNode labelIfEqualTo = new LabelNode(); // labelnode if true
+		toInject.add(new JumpInsnNode(IF_ICMPNE, labelIfEqualTo)); // if getBlockId == MyId
+		toInject.add(new TypeInsnNode(NEW, "ye")); // Load Return Values
+		toInject.add(new InsnNode(DUP)); //Load Return Values
+		toInject.add(new FieldInsnNode(GETSTATIC, "yc", "ay", "lyc;")); // Load Return Values
+		toInject.add(new MethodInsnNode(INVOKESPECIAL, "ye", "<init>", "(lyc;)V")); // Load Return Values
+		toInject.add(new InsnNode(ARETURN)); //Return Values
+		toInject.add(labelIfEqualTo); // Jump here if true
+		
+		method.instructions.insertBefore(targetNode, toInject);
+		
+		ModBnBTweaks.Log.info(" Patched " + method.name);
 	}
 }
