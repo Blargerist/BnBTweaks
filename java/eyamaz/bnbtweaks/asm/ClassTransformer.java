@@ -48,12 +48,22 @@ public class ClassTransformer implements IClassTransformer
 			return writeClassToBytes(classNode);
 		}
 		
-		if (name.equals("net.minecraft.item.ItemBucket"))
+		if (name.equals("net.minecraft.item.ItemBucket") || name.equals("wr"))
 		{
+			boolean isObfuscated = name.equals("wr");
+			
 			ModBnBTweaks.Log.info("Patching ItemBucket....");
 			
 			ClassNode classNode = readClassFromBytes(bytes);
-			MethodNode methodNode = findMethodNodeOfClass(classNode, "onItemRightClick", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;)Lnet/minecraft/item/ItemStack;");
+			
+			MethodNode methodNode = null;
+			
+			if (!isObfuscated) {
+			methodNode = findMethodNodeOfClass(classNode, "onItemRightClick", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;)Lnet/minecraft/item/ItemStack;");
+			}
+			else
+				methodNode = findMethodNodeOfClass(classNode, "wr/a", "(Lye;Labw;Luf;)Lye;");
+			
 			if (methodNode != null)
 			{
 				fixItemBucket(methodNode);
@@ -182,7 +192,7 @@ public class ClassTransformer implements IClassTransformer
 		toInject.add(new VarInsnNode(ILOAD, 7)); //i
 		toInject.add(new VarInsnNode(ILOAD, 8)); //j
 		toInject.add(new VarInsnNode(ILOAD, 9)); //k
-		toInject.add(new MethodInsnNode(INVOKEVIRTUAL, "new/minecraft/world/World", "getBlockId", "(III)I")); //getBlockId
+		toInject.add(new MethodInsnNode(INVOKEVIRTUAL, "net/minecraft/world/World", "getBlockId", "(III)I")); //getBlockId
 		toInject.add(new IntInsnNode(SIPUSH, 2957)); // MyId to be compared to getBlockId
 		LabelNode labelIfEqualTo = new LabelNode(); // labelnode if true
 		toInject.add(new JumpInsnNode(IF_ICMPNE, labelIfEqualTo)); // if getBlockId == MyId
