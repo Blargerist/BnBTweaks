@@ -1,10 +1,14 @@
 package eyamaz.bnbtweaks.asm;
 
 import static org.objectweb.asm.Opcodes.*;
+import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.launchwrapper.IClassTransformer;
+
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.tree.*;
+
 import eyamaz.bnbtweaks.ModBnBTweaks;
 
 public class ClassTransformer implements IClassTransformer
@@ -71,6 +75,23 @@ public class ClassTransformer implements IClassTransformer
 					ModBnBTweaks.Log.info("Patching Method: " + methodNode);
 					addOnFullItemBucketUseHook(methodNode, Hooks.class, "onFullBucketUse", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;III)Ljava/lang/Boolean;");
 				}
+			}
+			
+			return writeClassToBytes(classNode);
+		}
+		
+		if (name.equals("tconstruct.items.FilledBucket"))
+		{
+			ModBnBTweaks.Log.info("Patching TiC's FilledBucket....");
+			
+			ClassNode classNode = readClassFromBytes(bytes);
+						
+			MethodNode methodNode = findMethodNodeOfClass(classNode, "func_77659_a", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;)Lnet/minecraft/item/ItemStack;");
+			
+			if (methodNode != null)
+			{
+				ModBnBTweaks.Log.info("Patching Method: " + methodNode);
+				addOnFullItemBucketUseHookTiC(methodNode, Hooks.class, "onFullBucketUse", "(Lnet/minecraft/item/ItemStack;Lnet/minecraft/world/World;Lnet/minecraft/entity/player/EntityPlayer;III)Ljava/lang/Boolean;");
 			}
 			
 			return writeClassToBytes(classNode);
@@ -185,12 +206,45 @@ public class ClassTransformer implements IClassTransformer
 		
 		InsnList toInject = new InsnList();
 		
+		//equivalent to:
+		//if (Hooks.onFullBucketUse(itemstack, world, player, x, y, z) == true) {
+		//	return new ItemStack(Item.bucketEmpty);
+		//}
+		
 		toInject.add(new VarInsnNode (ALOAD, 1));
 		toInject.add(new VarInsnNode (ALOAD, 2));
 		toInject.add(new VarInsnNode (ALOAD, 3));
 		toInject.add(new VarInsnNode (ILOAD, 7));
 		toInject.add(new VarInsnNode (ILOAD, 8));
 		toInject.add(new VarInsnNode (ILOAD, 9));
+		toInject.add(new MethodInsnNode(INVOKESTATIC, hookClass.getName().replace('.', '/'), hookMethod, hookDesc));
+		toInject.add(new MethodInsnNode(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z"));
+		LabelNode labelIfEquals = new LabelNode();
+		toInject.add(new JumpInsnNode(IFEQ, labelIfEquals));
+		toInject.add(new TypeInsnNode(NEW, "net/minecraft/item/ItemStack"));
+		toInject.add(new InsnNode(DUP));
+		toInject.add(new FieldInsnNode(GETSTATIC, "yc", "ay", "Lyc;"));
+		toInject.add(new MethodInsnNode(INVOKESPECIAL, "net/minecraft/item/ItemStack", "<init>", "(Lnet/minecraft/item/Item;)V"));
+		toInject.add(new InsnNode(ARETURN));
+		toInject.add(labelIfEquals);
+		
+		method.instructions.insertBefore(targetNode, toInject);
+		
+		ModBnBTweaks.Log.info(" Added " + hookMethod + " hook to " + method.name);
+	}
+	
+	public void addOnFullItemBucketUseHookTiC(MethodNode method, Class<?> hookClass, String hookMethod, String hookDesc)
+	{
+		AbstractInsnNode targetNode = findChronoInstructionOfType(method, ALOAD, 20);
+		
+		InsnList toInject = new InsnList();
+		
+		toInject.add(new VarInsnNode (ALOAD, 1));
+		toInject.add(new VarInsnNode (ALOAD, 2));
+		toInject.add(new VarInsnNode (ALOAD, 3));
+		toInject.add(new VarInsnNode (ILOAD, 13));
+		toInject.add(new VarInsnNode (ILOAD, 14));
+		toInject.add(new VarInsnNode (ILOAD, 15));
 		toInject.add(new MethodInsnNode(INVOKESTATIC, hookClass.getName().replace('.', '/'), hookMethod, hookDesc));
 		toInject.add(new MethodInsnNode(INVOKEVIRTUAL, "java/lang/Boolean", "booleanValue", "()Z"));
 		LabelNode labelIfEquals = new LabelNode();
