@@ -66,12 +66,10 @@ public class ClassTransformer implements IClassTransformer
 			{
 				if (!isObfuscated)
 				{
-					ModBnBTweaks.Log.info("Patching Method: " + methodNode);
 					fixMinecraftMaterialPortal(methodNode);
 				}
 				else if (isObfuscated)
 				{
-					ModBnBTweaks.Log.info("Patching Obfuscated Method: " + obfMethodNode);
 					fixMinecraftMaterialPortal(obfMethodNode);
 				}
 			}
@@ -103,32 +101,13 @@ public class ClassTransformer implements IClassTransformer
 		{
 			if (method.name.equals(methodName) && method.desc.equals(methodDesc))
 			{
-				ModBnBTweaks.Log.info(" Found target method: " + methodName);
+				ModBnBTweaks.Log.info("Found target method: " + methodName);
 				return method;
 			}
 		}
 		return null;
 	}
 	
-	private AbstractInsnNode findChronoInstructionOfType(MethodNode method, int bytecode, int number)
-	{
-		for (int i = 0; i < number;) 
-		{
-			for (AbstractInsnNode instruction : method.instructions.toArray())
-			{
-				if (instruction.getOpcode() == bytecode)
-				{
-					i++;
-					if (i == number)
-					{
-						return instruction;
-					}
-				}
-			}
-		}
-		return null;
-	}
-
 	private AbstractInsnNode findFirstInstructionOfType(MethodNode method, int bytecode)
 	{
 		for (AbstractInsnNode instruction : method.instructions.toArray())
@@ -164,7 +143,7 @@ public class ClassTransformer implements IClassTransformer
 
 		method.instructions.insertBefore(targetNode, toInject);
 
-		ModBnBTweaks.Log.info(" Patched " + method.name);
+		ModBnBTweaks.Log.info("Patched " + method.name);
 	}
 
 	public void fixHostileWorldsMapGenSchematics(MethodNode method)
@@ -179,7 +158,7 @@ public class ClassTransformer implements IClassTransformer
 		
 		method.instructions.insertBefore(targetNode, toInject);
 		
-		ModBnBTweaks.Log.info(" Patched " + method.name);
+		ModBnBTweaks.Log.info("Patched " + method.name);
 	}
 	
 	public void fixMinecraftMaterialPortal(MethodNode method)
